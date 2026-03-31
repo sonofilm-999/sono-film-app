@@ -139,7 +139,7 @@ function calculate() {
 
 총 견적: ${totalCost.toLocaleString()}원`;
 
-    document.getElementById("result").innerText = finalText;
+    document.getElementById("result").innerHTML = finalText.replace(/\n/g, "<br>");
 }
 
 function copyResult() {
