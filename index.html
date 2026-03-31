@@ -6,17 +6,17 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#000000">
-
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
 
 <style>
 body { font-family: Arial; padding: 20px; background:#f5f5f5;}
-.container { max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px;}
+.container { max-width:700px; margin:auto; background:white; padding:20px; border-radius:10px;}
 textarea { width:100%; height:120px;}
 input { width:100%; padding:8px; margin:5px 0;}
 button { width:100%; padding:12px; margin-top:10px; background:black; color:white;}
 .result { margin-top:20px; line-height:1.6; background:#fafafa; padding:15px; border-radius:8px;}
+.copyBtn { background:#444; }
 </style>
 </head>
 
@@ -24,26 +24,67 @@ button { width:100%; padding:12px; margin-top:10px; background:black; color:whit
 <div class="container">
 <h2>SONO FILM 견적 계산기</h2>
 
-<textarea id="input" placeholder="예: 100*2100*2"></textarea>
+<p>입력 예: 100*2100*2</p>
+<textarea id="input"></textarea>
 
+<h4>설정</h4>
 여유율 (%)
 <input id="margin" value="10">
 
+재료비 (원/m)
+<input id="material" value="10000">
+
+인건비 (1인)
+<input id="labor" value="200000">
+
+식대 (1인)
+<input id="food" value="10000">
+
 <button onclick="calculate()">계산하기</button>
+<button class="copyBtn" onclick="copyResult()">결과 복사</button>
 
 <div class="result" id="result"></div>
 </div>
 
 <script>
+let finalText = "";
+
 function calculate() {
-    const lines = document.getElementById("input").value.trim().split("\n");
+    const raw = document.getElementById("input").value.trim();
+
+    if (!raw) {
+        alert("값을 입력해주세요");
+        return;
+    }
+
+    const lines = raw.split(/\r?\n/);
 
     let margin = parseFloat(document.getElementById("margin").value) / 100;
+    let materialUnit = parseFloat(document.getElementById("material").value);
+    let laborUnit = parseFloat(document.getElementById("labor").value);
+    let foodUnit = parseFloat(document.getElementById("food").value);
+
     let pieces = [];
 
     for (let line of lines) {
+        line = line.trim();
         if (!line) continue;
-        let [w, h, q] = line.split("*").map(Number);
+
+        let parts = line.split("*");
+
+        if (parts.length !== 3) {
+            alert("입력 오류: " + line);
+            return;
+        }
+
+        let w = Number(parts[0]);
+        let h = Number(parts[1]);
+        let q = Number(parts[2]);
+
+        if (isNaN(w) || isNaN(h) || isNaN(q)) {
+            alert("숫자 오류: " + line);
+            return;
+        }
 
         for (let i = 0; i < q; i++) {
             pieces.push({ width: w, height: h });
@@ -76,8 +117,38 @@ function calculate() {
 
     let totalM = total / 1000;
 
-    document.getElementById("result").innerHTML =
-        `필름 사용량: ${totalM.toFixed(2)} m`;
+    let workers = Math.ceil(totalM / 15);
+
+    let materialCost = totalM * materialUnit;
+    let laborCost = workers * laborUnit;
+    let foodCost = workers * foodUnit;
+    let miscCost = 100000;
+
+    let totalCost = materialCost + laborCost + foodCost + miscCost;
+
+    finalText =
+`[SONO FILM 견적서]
+
+필름 사용량: ${totalM.toFixed(2)}m
+작업 인원: ${workers}명
+
+재료비: ${materialCost.toLocaleString()}원
+인건비: ${laborCost.toLocaleString()}원
+식대: ${foodCost.toLocaleString()}원
+공과잡비: ${miscCost.toLocaleString()}원
+
+총 견적: ${totalCost.toLocaleString()}원`;
+
+    document.getElementById("result").innerText = finalText;
+}
+
+function copyResult() {
+    if (!finalText) {
+        alert("먼저 계산하세요");
+        return;
+    }
+    navigator.clipboard.writeText(finalText);
+    alert("견적이 복사되었습니다.");
 }
 
 if ('serviceWorker' in navigator) {
